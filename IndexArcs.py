@@ -62,15 +62,12 @@ class IndexArcs(MRJob):
                     else:
                         self.stderr.write("Broken Pipe tryed more than 3 times.\n")
                         self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))
-                        self.stdout.write("Broken Pipe tryed more than 3 times.\n")
-                        self.stdout.write("Arcname:\t" + warc_path+"\n" + str(exc))
+
 
                 else:            
                     self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))
-                    self.stdout.write("Arcname:\t" + warc_path+"\n" + str(exc))
             except AttributeError: #Exception has no ErrorNo lets just print the error to the output
-                self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))
-                self.stdout.write("Arcname:\t" + warc_path+"\n" + str(exc))        
+                self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))     
     def _conv_warc_to_cdx_path(self, warc_path):
         cdx_path = warc_path.replace('.arc.gz', '.cdx.gz')
         return cdx_path
