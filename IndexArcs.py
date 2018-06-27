@@ -10,6 +10,7 @@ import StringIO
 import gzip
 import codecs
 import time
+import json
 from mrjob.job import MRJob
 from mrjob.protocol import RawValueProtocol
 
@@ -27,14 +28,15 @@ class IndexArcs(MRJob):
     OUTPUT_PROTOCOL = RawValueProtocol
 
 
-    #HADOOP_INPUT_FORMAT = 'org.apache.hadoop.mapred.lib.NLineInputFormat'
+    HADOOP_INPUT_FORMAT = 'org.apache.hadoop.mapred.lib.NLineInputFormat' 
 
     JOBCONF =  {'mapreduce.task.timeout': '9600000',
                 'mapreduce.input.fileinputformat.split.maxsize': '50000000',
                 'mapreduce.map.speculative': 'false',
                 'mapreduce.reduce.speculative': 'false',
                 'mapreduce.job.jvm.numtasks': '-1',
-                'mapreduce.input.lineinputformat.linespermap': 2,
+                'mapreduce.input.lineinputformat.linespermap': 2, 
+		'mapred.job.priority': 'VERY_HIGH'
                 }
 
     def configure_options(self):
@@ -60,14 +62,17 @@ class IndexArcs(MRJob):
                         attempts -= 1
                         self._load_and_index(warc_path) #try again in case of Broken Pipe Error  
                     else:
-                        self.stderr.write("Broken Pipe tryed more than 3 times.\n")
+                        self.stderr.write("Broken Pipe tried more than 3 times.\n")
                         self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))
-
 
                 else:            
                     self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))
             except AttributeError: #Exception has no ErrorNo lets just print the error to the output
-                self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))     
+                self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc))
+            except Exception as ex2:
+               self.stderr.write("Arcname:\t" + warc_path+"\n" + str(exc)) 
+
+
     def _conv_warc_to_cdx_path(self, warc_path):
         cdx_path = warc_path.replace('.arc.gz', '.cdx.gz')
         return cdx_path
@@ -83,7 +88,16 @@ class IndexArcs(MRJob):
             cdxtemp.seek(0)
             cdxtempString=StringIO.StringIO(cdxtemp.read())
             cdxtempobj = gzip.GzipFile(fileobj=cdxtempString)
-            shutil.copyfileobj(cdxtempobj, sys.stdout)
+            fileLines = cdxtempobj.read().split("\n")
+            for line in fileLines:
+                if not (line.startswith("Error") or line.startswith("Invalid ARC record") or line.startswith("Unknown archive format")):
+                    " ".join(line.split(" ")[2:])
+                    jsonStr = " ".join(line.split(" ")[2:])
+                    cdx_record = json.loads(jsonStr)
+                    status = cdx_record.get('status', None)
+                    if status:
+                        if re.search(r'2.*|3.*|1.*', status):
+                            self.stdout.write(line + "\n")
             cdxtemp.flush()
 if __name__ == '__main__':
     IndexArcs.run()
