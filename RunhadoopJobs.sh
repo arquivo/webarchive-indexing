@@ -1,5 +1,5 @@
 #!/bin/bash
-export HADOOP_HOME=/opt/hadoop-1.2.1
+export HADOOP_HOME=/opt/hadoop-3.0.3
 FILE=$1
 while read line; do
      echo "$line"
