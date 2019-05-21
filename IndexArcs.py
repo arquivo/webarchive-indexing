@@ -6,7 +6,7 @@ import os
 import errno
 import re
 import sys
-import StringIO
+import io
 import gzip
 import codecs
 import time
@@ -18,8 +18,8 @@ from tempfile import TemporaryFile
 from pywb.warc.cdxindexer import write_cdx_index
 from gzip import GzipFile
 import urllib
-from urllib2 import urlopen
- 
+from urllib.request import urlopen
+
 
 WORD_RE = re.compile(r"[\w']+")
 
@@ -28,7 +28,7 @@ class IndexArcs(MRJob):
     OUTPUT_PROTOCOL = RawValueProtocol
 
 
-    HADOOP_INPUT_FORMAT = 'org.apache.hadoop.mapred.lib.NLineInputFormat' 
+    #HADOOP_INPUT_FORMAT = 'org.apache.hadoop.mapred.lib.NLineInputFormat' 
 
     JOBCONF =  {'mapreduce.task.timeout': '9600000',
                 'mapreduce.input.fileinputformat.split.maxsize': '50000000',
@@ -79,14 +79,14 @@ class IndexArcs(MRJob):
 
     def _load_and_index(self, warc_path):
         warctempURL = urlopen(warc_path)
-        warctemp=StringIO.StringIO(warctempURL.read()) 
+        warctemp=io.StringIO.StringIO(warctempURL.read()) 
 
         with TemporaryFile(mode='w+b') as cdxtemp:
             cdxfile = GzipFile(fileobj=cdxtemp, mode='w+b')
             write_cdx_index(cdxfile, warctemp, basename(warc_path), **self.index_options)
             cdxfile.close()
             cdxtemp.seek(0)
-            cdxtempString=StringIO.StringIO(cdxtemp.read())
+            cdxtempString=io.StringIO.StringIO(cdxtemp.read())
             cdxtempobj = gzip.GzipFile(fileobj=cdxtempString)
             fileLines = cdxtempobj.read().split("\n")
             for line in fileLines:
